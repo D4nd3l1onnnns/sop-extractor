@@ -3,7 +3,7 @@ import os
 import tempfile
 import re
 import requests
-import google.generativeai as genai
+from google import genai
 
 # Konfigurasi Tampilan Halaman Web
 st.set_page_config(page_title="SOP AI Extractor", page_icon="🏥", layout="centered")
@@ -31,9 +31,8 @@ if st.button("🚀 Analisis Dokumen SOP", type="primary"):
     else:
         with st.spinner("🤖 AI sedang membaca seluruh isi dokumen SOP secara detail..."):
             try:
-                # Konfigurasi AI Gemini
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                # Inisialisasi Client Google Gen AI terbaru
+                client = genai.Client(api_key=api_key)
                 
                 # Ekstrak File ID unik dari Link Google Drive
                 match = re.search(r'/d/([a-zA-Z0-9-_]+)', drive_url)
@@ -57,8 +56,8 @@ if st.button("🚀 Analisis Dokumen SOP", type="primary"):
                     tmp.write(response.content)
                     pdf_path = tmp.name
 
-                # Upload file PDF sementara ke server Gemini AI
-                ai_file = genai.upload_file(pdf_path, mime_type="application/pdf")
+                # Upload file PDF ke server Gemini menggunakan SDK baru
+                ai_file = client.files.upload(file=pdf_path)
                 
                 # Perintah / Prompt khusus untuk AI
                 prompt = """
@@ -74,12 +73,15 @@ if st.button("🚀 Analisis Dokumen SOP", type="primary"):
                 (sebutkan seluruh nomor dan poin tujuan secara lengkap sesuai isi dokumen tanpa terpotong)
                 """
                 
-                # Proses hasil dari Gemini AI
-                result = model.generate_content([ai_file, prompt])
+                # Generate konten menggunakan model gemini-2.5-flash atau gemini-1.5-flash
+                result = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[ai_file, prompt]
+                )
                 
-                # Bersihkan file sementara dari server
+                # Bersihkan file sementara dari server lokal & cloud
                 os.remove(pdf_path)
-                genai.delete_file(ai_file.name)
+                client.files.delete(name=ai_file.name)
                 
                 # Tampilkan hasil di layar web
                 st.success("✅ Analisis Dokumen Berhasil!")
