@@ -73,25 +73,43 @@ if st.button("🚀 Analisis Dokumen SOP", type="primary"):
                 (sebutkan seluruh nomor dan poin tujuan secara lengkap sesuai isi dokumen tanpa terpotong)
                 """
                 
-                # Generate konten menggunakan model gemini-2.5-flash atau gemini-1.5-flash
-                result = client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=[ai_file, prompt]
-                )
+                # Daftar model cadangan (Fallback beruntun untuk mengantisipasi error server sibuk)
+                daftar_model = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+                hasil_teks = None
+                sukses = False
+
+                for nama_model in daftar_model:
+                    try:
+                        response = client.models.generate_content(
+                            model=nama_model,
+                            contents=[ai_file, prompt]
+                        )
+                        hasil_teks = response.text
+                        sukses = True
+                        break
+                    except Exception:
+                        continue
                 
                 # Bersihkan file sementara dari server lokal & cloud
                 os.remove(pdf_path)
-                client.files.delete(name=ai_file.name)
+                try:
+                    client.files.delete(name=ai_file.name)
+                except Exception:
+                    pass
+
+                if not sukses or not hasil_teks:
+                    st.error("Semua server model Gemini sedang sibuk atau mengalami gangguan sementara. Silakan coba beberapa saat lagi.")
+                    st.stop()
                 
                 # Tampilkan hasil di layar web
                 st.success("✅ Analisis Dokumen Berhasil!")
                 st.markdown("---")
                 st.markdown("### Hasil Ekstraksi:")
-                st.markdown(result.text)
+                st.markdown(hasil_teks)
                 
                 # Kotak Teks Khusus (Agar mudah disalin/copy)
                 st.markdown("---")
-                st.text_area("Kotak Teks Siap Salin:", value=result.text, height=300)
+                st.text_area("Kotak Teks Siap Salin:", value=hasil_teks, height=300)
                 
             except Exception as e:
                 st.error(f"Terjadi kesalahan teknis: {str(e)}")
