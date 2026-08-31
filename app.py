@@ -75,7 +75,7 @@ if st.button("🚀 Analisis Dokumen SOP", type="primary"):
                 
                 # Generate konten menggunakan model gemini-2.5-flash atau gemini-1.5-flash
                 result = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=[ai_file, prompt]
                 )
                 
